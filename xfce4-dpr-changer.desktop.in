@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=xfce4-dpr-changer
+Exec=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_BINDIR@/@PROJECT_NAME@
+OnlyShowIn=XFCE;
