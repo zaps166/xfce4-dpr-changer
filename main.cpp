@@ -16,6 +16,7 @@ using namespace std;
 constexpr auto g_windowScalingFactorPath = "/Gdk/WindowScalingFactor";
 constexpr auto g_unscaledDpiPath = "/Gdk/UnscaledDPI";
 constexpr auto g_dpiPath = "/Xft/DPI";
+constexpr auto g_cursorSizePath = "/Gtk/CursorThemeSize";
 
 constexpr auto g_xfwm4ThemePath = "/general/theme";
 
@@ -90,24 +91,41 @@ static inline int getUnscaledDpi(int dpi, int windowScalingFactor)
 {
     return qRound(dpi * 1000.0 / windowScalingFactor);
 }
+static inline int getCursorSize(int dpi)
+{
+    const int size = qCeil(dpi / 4.0);
+    if (size & 1)
+        return size + 1;
+    return size;
+}
 
 static int getCurrentScale()
 {
     const auto currDpiProcess = getXsettingValueAsync(g_dpiPath);
     const auto currWindowScalingFactorProcess = getXsettingValueAsync(g_windowScalingFactorPath);
     const auto currUnscaledDpiProcess = getXsettingValueAsync(g_unscaledDpiPath);
+    const auto currCursorSizeProcess = getXsettingValueAsync(g_cursorSizePath);
 
     const int currDpi = getIntValueFromAsyncProcess(currDpiProcess);
     const int currWindowScalingFactor = getIntValueFromAsyncProcess(currWindowScalingFactorProcess);
     const int currUnscaledDpi = getIntValueFromAsyncProcess(currUnscaledDpiProcess);
+    const int currCursorSize = getIntValueFromAsyncProcess(currCursorSizeProcess);
 
-    if (currDpi > 0 && currWindowScalingFactor > 0)
+    if (currDpi > 0 && currWindowScalingFactor > 0 && currCursorSize > 0)
     {
         const int scale = getScale(currDpi);
         const int windowScalingFactor = getWindowScalingFactor(scale);
         const int unscaledDpi = getUnscaledDpi(currDpi, windowScalingFactor);
-        if (windowScalingFactor == currWindowScalingFactor && ((currUnscaledDpi == 0 && unscaledDpi == g_dpiReference * 1000) || (currUnscaledDpi > 0 && unscaledDpi == currUnscaledDpi)))
+        const int cursorSize = getCursorSize(currDpi);
+
+        const bool hasSameWindowScalingFactor = (windowScalingFactor == currWindowScalingFactor);
+        const bool hasSameUnscaledDpi = ((currUnscaledDpi == 0 && unscaledDpi == g_dpiReference * 1000) || (currUnscaledDpi > 0 && unscaledDpi == currUnscaledDpi));
+        const bool hasSameCursorSize = (currCursorSize == cursorSize);
+
+        if (hasSameWindowScalingFactor && hasSameUnscaledDpi && hasSameCursorSize)
+        {
             return scale;
+        }
     }
 
     return 0;
@@ -118,6 +136,7 @@ static void scalingActionTriggered(int scale)
     const int dpi = getDpi(scale);
     const int windowScalingFactor = getWindowScalingFactor(scale);
     const int unscaledDpi = getUnscaledDpi(dpi, windowScalingFactor);
+    const int cursorSize = getCursorSize(dpi);
 
     setXsettingIntValue(g_windowScalingFactorPath, windowScalingFactor);
     if (unscaledDpi == g_dpiReference * 1000)
@@ -125,6 +144,7 @@ static void scalingActionTriggered(int scale)
     else
         setXsettingIntValue(g_unscaledDpiPath, unscaledDpi);
     setXsettingIntValue(g_dpiPath, dpi);
+    setXsettingIntValue(g_cursorSizePath, cursorSize);
     setXsettingIntValue("/Xfce/LastCustomDPI", dpi);
 
     // Restart Xfce4 panel
