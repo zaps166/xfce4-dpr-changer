@@ -36,6 +36,10 @@ static int getIntValueFromAsyncProcess(const unique_ptr<QProcess> &process)
         return 0;
     return process->readAllStandardOutput().toInt();
 }
+static int getXsettingIntValue(const QString &path)
+{
+    return getIntValueFromAsyncProcess(getXsettingValueAsync(path));
+}
 
 static QString getXfwm4Theme()
 {
@@ -138,17 +142,8 @@ static void scalingActionTriggered(int scale)
     const int unscaledDpi = getUnscaledDpi(dpi, windowScalingFactor);
     const int cursorSize = getCursorSize(dpi);
 
-    setXsettingIntValue(g_windowScalingFactorPath, windowScalingFactor);
-    if (unscaledDpi == g_dpiReference * 1000)
-        resetXsettingIntValue(g_unscaledDpiPath);
-    else
-        setXsettingIntValue(g_unscaledDpiPath, unscaledDpi);
-    setXsettingIntValue(g_dpiPath, dpi);
-    setXsettingIntValue(g_cursorSizePath, cursorSize);
-    setXsettingIntValue("/Xfce/LastCustomDPI", dpi);
-
-    // Restart Xfce4 panel
-    if (auto sessionBus = QDBusConnection::sessionBus(); sessionBus.isConnected())
+    // Restart Xfce4 panel if window scaling has changed
+    if (auto sessionBus = QDBusConnection::sessionBus(); sessionBus.isConnected() && windowScalingFactor != getXsettingIntValue(g_windowScalingFactorPath))
     {
         sessionBus.asyncCall(
             QDBusMessage::createMethodCall(
@@ -159,6 +154,15 @@ static void scalingActionTriggered(int scale)
             ) << true // Restart (argument)
         );
     }
+
+    setXsettingIntValue(g_windowScalingFactorPath, windowScalingFactor);
+    if (unscaledDpi == g_dpiReference * 1000)
+        resetXsettingIntValue(g_unscaledDpiPath);
+    else
+        setXsettingIntValue(g_unscaledDpiPath, unscaledDpi);
+    setXsettingIntValue(g_dpiPath, dpi);
+    setXsettingIntValue(g_cursorSizePath, cursorSize);
+    setXsettingIntValue("/Xfce/LastCustomDPI", dpi);
 
     // Set Xfwm4 style
     if (const auto theme = getXfwm4Theme(); !theme.isEmpty())
