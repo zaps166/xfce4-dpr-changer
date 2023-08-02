@@ -156,7 +156,7 @@ static void scalingActionTriggered(int scale)
     }
 
     setXsettingIntValue(g_windowScalingFactorPath, windowScalingFactor);
-    if (unscaledDpi == g_dpiReference * 1000)
+    if (dpi == g_dpiReference && unscaledDpi == g_dpiReference * 1000)
         resetXsettingIntValue(g_unscaledDpiPath);
     else
         setXsettingIntValue(g_unscaledDpiPath, unscaledDpi);
